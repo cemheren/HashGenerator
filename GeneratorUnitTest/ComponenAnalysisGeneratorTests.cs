@@ -5,10 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using GeneratorDependencies;
+using Generators.ComponentAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Stateful.Generators;
 
 namespace GeneratorUnitTest
 {
@@ -37,9 +37,13 @@ namespace Program.Test
 
     {Filler}
 
+    public class DependencyLevelTwo    
+{{}}
     
     public class DependencyLevelOne
-    {{ }}
+    {{ 
+        private DependencyLevelTwo dependencyLevelTwo;    
+    }}
 
     [ComponentAnalysis]
     public class TopLevelClassOne
