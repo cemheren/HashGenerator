@@ -14,5 +14,15 @@ namespace Generators.ComponentAnalysis
         {
             return $"{Identifier} - {HashCode}";
         }
+
+        public override bool Equals(object obj)
+        {
+            return this.Identifier == ((Component)obj).Identifier;
+        }
+
+        public override int GetHashCode()
+        {
+            return this.Identifier.GetHashCode();
+        }
     }
 }

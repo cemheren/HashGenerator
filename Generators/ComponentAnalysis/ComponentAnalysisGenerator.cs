@@ -4,10 +4,13 @@
     using System.IO;
     using System.Linq;
     using System.Reflection;
+    using System.Text;
     using Generators.Extensions;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
     using Microsoft.CodeAnalysis.CSharp.Syntax;
+    using Microsoft.CodeAnalysis.Text;
+    using RoslynHelpers;
 
     [Generator]
     public class ComponentAnalysisGenerator : ISourceGenerator
@@ -34,6 +37,17 @@
             // we can retrieve the populated instance via the context
             MySyntaxReceiver syntaxReceiver = (MySyntaxReceiver)context.SyntaxReceiver;
 
+            // Get all my compiled dependencies, they might also have analyzed components in them.
+            var types = context.Compilation.GetAllCompilationTypes();
+
+            var properties = types.Where(t => t.TypeKind == TypeKind.Interface && t.DeclaredAccessibility == Accessibility.Public).Select(t => new
+            {
+                Interface = t,
+                Properties = t.GetMembers()
+            });
+
+            //var f = properties.First().Properties.First();
+
             this.AllClasses = syntaxReceiver.AllClasses;
             this.ComponentClasses = syntaxReceiver.ClassesToAugment;
 
@@ -42,29 +56,47 @@
 
             var componentList = new List<Component>();
 
-            foreach (var classDeclarationSyntax in this.ComponentClasses)
+            foreach (var classDeclarationSyntax in this.AllClasses.Values)
             {
                 var topLevelComponent = new Component
                 {
                     Identifier = classDeclarationSyntax.Identifier.ToString(),
                     HashCode = 1
                 };
-                
-                componentList.Add(topLevelComponent);
 
-                this.GetDescendantNodesRecursive(compilation, classDeclarationSyntax, 1, componentList);
+                var componentDependencyList = new List<Component>();
+                componentDependencyList.Add(topLevelComponent);
+
+                this.GetDescendantNodesRecursive(compilation, classDeclarationSyntax, 1, componentDependencyList);
 
                 // todo this should only compute using descendants.
-                topLevelComponent.HashCode = componentList.Select(c => c.HashCode).Multiply() * classDeclarationSyntax.ToString().GetHashCode();
+                topLevelComponent.HashCode = componentDependencyList.Select(c => c.HashCode).Multiply() * classDeclarationSyntax.ToString().GetHashCode();
+
+                //var memberString = $@"public static int hashcode => {topLevelComponent.HashCode};";
+                componentList.AddRange(componentDependencyList);
             }
 
-            File.WriteAllText(Path.Combine(Path.GetDirectoryName(dir), "Analysis.txt"), string.Join("\n", componentList));
+            var componentFields = componentList.Distinct().Select(c => $@"public int {c.Identifier} => {c.HashCode};").StringJoin("\n");
+
+            SourceText sourceText = SourceText.From($@"
+namespace ComponentAnalysisGenerated {{
+
+    public partial class AnalyzedComponents123
+    {{
+        {componentFields}
+    }}
+}}", Encoding.UTF8);
+
+            context.AddSource("ComponentAnalysisGenerated.cs", sourceText);
+
+
+            //File.WriteAllText(Path.Combine(Path.GetDirectoryName(dir), "Analysis.txt"), string.Join("\n", componentList));
         }
 
         private void GetDescendantNodesRecursive(Compilation compilation, SyntaxNode syntaxNode, int level, List<Component> classStrlist)
         {
             var semantic = compilation.GetSemanticModel(syntaxNode.SyntaxTree);
-            var spaces = Enumerable.Range(0, level).Select(x => "    ").StringJoin();
+            var spaces = Enumerable.Range(0, level).Select(x => "__").StringJoin();
 
             foreach (var node in syntaxNode.DescendantNodes())
             {

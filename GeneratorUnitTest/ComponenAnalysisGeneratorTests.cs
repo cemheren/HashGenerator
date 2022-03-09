@@ -4,6 +4,7 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using DependencyLibrary;
 using GeneratorDependencies;
 using Generators.ComponentAnalysis;
 using Microsoft.CodeAnalysis;
@@ -34,6 +35,7 @@ namespace Program.Test
 {{
     using System;
     using GeneratorDependencies;
+    using DependencyLibrary;
 
     {Filler}
 
@@ -43,6 +45,10 @@ namespace Program.Test
     public class DependencyLevelOne
     {{ 
         private DependencyLevelTwo dependencyLevelTwo;    
+
+        private Interleaver interleaver;
+
+        private DependencyClass dependencyClass;
     }}
 
     [ComponentAnalysis]
@@ -58,23 +64,22 @@ namespace Program.Test
     }}
 }}
 ";
-
             Compilation comp = CreateCompilation(userSource);
             var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 
             var newComp = RunGenerators(comp, out var generatorDiags, new ComponentAnalysisGenerator());
-            //var newFile = newComp.SyntaxTrees.Single(x => Path.GetFileName(x.FilePath).EndsWith("Generated.cs"));
+            var newFile = newComp.SyntaxTrees.Single(x => Path.GetFileName(x.FilePath).EndsWith("ComponentAnalysisGenerated.cs"));
 
-            //Assert.IsNotNull(newFile);
-            //var generatedfile = newFile.GetText().ToString();
+            Assert.IsNotNull(newFile);
+            var generatedfile = newFile.GetText().ToString();
 
-            //Assert.IsTrue(generatedfile.Contains("state.x = 6"), message: "state.x = 6");
+            Assert.IsTrue(generatedfile.Contains("DependencyLevelOne"), message: "DependencyLevelOne");
+            Assert.IsTrue(generatedfile.Contains("DependencyLevelTwo"), message: "DependencyLevelTwo");
 
-            //Assert.AreEqual(0, generatorDiags.Length);
-            //errors = newComp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+            Assert.AreEqual(0, generatorDiags.Length);
+            errors = newComp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
 
-            //Assert.AreEqual(0, errors.Count, 
-            //    message: string.Join("\n ", errors));
+            Assert.AreEqual(0, errors.Count, message: string.Join("\n ", errors));
         }
 
         private static Compilation CreateCompilation(string source)
@@ -85,6 +90,7 @@ namespace Program.Test
             // need to manually add .netstandard since the GeneratorDependencies is on .netstandard2.0 
             var references = new List<PortableExecutableReference>{
                     MetadataReference.CreateFromFile(typeof(Binder).GetTypeInfo().Assembly.Location),
+                    MetadataReference.CreateFromFile(typeof(DependencyClass).Assembly.Location),
                     MetadataReference.CreateFromFile(typeof(IGeneratorCapable).Assembly.Location),
                     MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
                     MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "netstandard.dll")

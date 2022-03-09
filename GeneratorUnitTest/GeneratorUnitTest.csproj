@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DependencyLibrary\DependencyLibrary.csproj" />
     <ProjectReference Include="..\Generators\Generators.csproj" />
   </ItemGroup>
 

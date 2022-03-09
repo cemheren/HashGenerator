@@ -6,11 +6,11 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <RunGenerators Condition="'$(RunGenerators)' == ''">true</RunGenerators>
+    <!--<RunGenerators Condition="'$(RunGenerators)' == ''">true</RunGenerators>-->
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\GeneratorDependencies\GeneratorDependencies.csproj" />
-    <ProjectReference Include="..\Generators\Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" Condition="'$(RunGenerators)' == 'true'" />
+    <ProjectReference Include="..\Generators\Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
