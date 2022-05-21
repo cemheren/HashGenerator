@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
@@ -22,6 +24,8 @@ namespace GeneratorUnitTest
     {
         public static void Main(string[] args)
         {
+            var topLevelClassOne = new TopLevelClassOne();
+            var topLevelClassTwo = new TopLevelClassTwo();
         }
     }
 "
@@ -40,7 +44,8 @@ namespace Program.Test
     {Filler}
 
     public class DependencyLevelTwo    
-{{}}
+    {{
+    }}
     
     public class DependencyLevelOne
     {{ 

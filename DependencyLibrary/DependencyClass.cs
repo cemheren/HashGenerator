@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 
 namespace DependencyLibrary
 {
@@ -9,6 +10,7 @@ namespace DependencyLibrary
             return abc;
         }
 
+        [JsonProperty]
         public int SomeProperty { get; set; }
     }
 }

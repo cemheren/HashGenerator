@@ -1,5 +1,7 @@
 ﻿
 using Program.ComponentAnalysis;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace TestProgram
 {
@@ -10,7 +12,8 @@ namespace TestProgram
             var topLevelClassOne = new TopLevelClassOne();
             var topLevelClassTwo = new TopLevelClassTwo();
 
-            System.Console.WriteLine(new ComponentAnalysisGenerated.AnalyzedComponents123().TopLevelClassOne);
+            System.Console.WriteLine(new ComponentAnalysisGenerated.AnalyzedComponents123().DependencyLevelOne);
         }
     }
 }
+

@@ -10,6 +10,8 @@ namespace Generators.ComponentAnalysis
 
         public int HashCode { get; set; }
 
+        public List<Component> Children = new List<Component>();
+
         public override string ToString()
         {
             return $"{Identifier} - {HashCode}";
