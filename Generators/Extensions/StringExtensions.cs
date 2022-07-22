@@ -27,12 +27,12 @@ namespace Generators.Extensions
             return string.Join(separator, source);
         }
 
-        internal static int Multiply(this IEnumerable<int> source)
+        internal static int XOr(this IEnumerable<int> source)
         {
             var sum = 1;
             foreach (var item in source) 
             {
-                sum *= item;
+                sum ^= item;
             }
 
             return sum;

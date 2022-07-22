@@ -18,11 +18,14 @@
     {
         private int count;
 
+        private string version = "0.0.5";
+
         public Dictionary<string, ITypeSymbol> CompiledDependencies { get; private set; }
   
         public Dictionary<string, ClassDeclarationSyntax> AllClasses { get; private set; }
         
         public List<ClassDeclarationSyntax> ComponentClasses { get; private set; }
+        internal Dictionary<string, Component> ComponentCache { get; private set; }
 
         public void Initialize(GeneratorInitializationContext context)
         {
@@ -62,6 +65,7 @@
             var dir = Assembly.GetExecutingAssembly().Location;
             var compilation = context.Compilation;
 
+            this.ComponentCache = new Dictionary<string, Component>();
             var componentList = new List<Component>();
 
             this.count = 0;
@@ -77,7 +81,7 @@
                 componentList.Add(topLevelComponent);
 
                 topLevelComponent.Children = this.GetDescendantNodesRecursive(compilation, classDeclarationSyntax, 1);
-                topLevelComponent.HashCode = topLevelComponent.Children.Select(c => c.HashCode).Multiply() * classDeclarationSyntax.ToString().GetHashCode();
+                topLevelComponent.HashCode = topLevelComponent.Children.Select(c => c.HashCode).XOr() * classDeclarationSyntax.ToString().GetHashCode();
             }
 
             var componentHashcodes = PrintHashCodes(componentList);
@@ -90,11 +94,15 @@ namespace ComponentAnalysisGenerated {{
 
     public partial class ComponentHashcodes
     {{
+        private string version => ""{version}"";
+        
         {componentHashcodes}
     }}
 
     public partial class ComponentDependencies
     {{
+        private HashSet<string> visited = new HashSet<string>();
+
         {componentDependencies}
     }}
 
@@ -116,7 +124,7 @@ namespace ComponentAnalysisGenerated {{
 
             foreach (var node in AllDescendantNodesRecursive(syntaxNode, processed))
             {
-                if (descendants.Count > 200 || level > 10)
+                if (descendants.Count > 200 || level > 15)
                 {
                     break;
                 }
@@ -127,6 +135,14 @@ namespace ComponentAnalysisGenerated {{
                 if (node is IdentifierNameSyntax identifierNameSyntax)
                 {
                     var identifierName = identifierNameSyntax.Identifier.ToString();
+
+                    // Don't recompute known components
+                    if (ComponentCache.TryGetValue(identifierName, out var discoveredComponent))
+                    {
+                        descendants.Add(discoveredComponent);
+                        continue;
+                    }
+
                     if (this.AllClasses.TryGetValue(identifierName, out var @class))
                     {
                         var current = new Component()
@@ -135,9 +151,11 @@ namespace ComponentAnalysisGenerated {{
                             HashCode = @class.ToFullString().GetHashCode()
                         };
 
-                        descendants.Add(current);
                         current.Children = this.GetDescendantNodesRecursive(compilation, @class, ++level);
-                        current.HashCode = current.Children.Select(c => c.HashCode).Multiply() * identifierName.GetHashCode();
+                        current.HashCode = current.Children.Select(c => c.HashCode).XOr() * identifierName.GetHashCode();
+                    
+                        descendants.Add(current);
+                        ComponentCache[identifierName] = current;
                     }
 
                     if (this.CompiledDependencies.TryGetValue(identifierName, out var typeSymbol))
@@ -149,6 +167,7 @@ namespace ComponentAnalysisGenerated {{
                         };
 
                         descendants.Add(current);
+                        ComponentCache[identifierName] = current;
                     }
                 }
             }   
@@ -191,34 +210,28 @@ namespace ComponentAnalysisGenerated {{
                 var component = queue.Dequeue();
                 if (cache.Contains(component) == false)
                 {
-                    sb.Append($@"public List<string> {component.Identifier} => ");
+                    sb.AppendLine($@"public List<string> {component.Identifier}() {{ ");
+
+                    sb.AppendLine(@"    var ls = new List<string>() { """ + component.Identifier + @"""};");
+                    
+                    sb.AppendLine($@"   if(this.visited.Contains(""" + component.Identifier + @""")) return ls;");
+
+                    sb.AppendLine($@"   this.visited.Add(""" + component.Identifier + @""");");
 
                     if (component.Children.Count > 0)
                     {
-                        sb.Append(@"new List<string>() { """ + component.Identifier + @"""}.Concat(");
 
-                        sb.Append("this.");
-                        sb.Append(component.Children[0].Identifier);
+                        sb.AppendLine($@"   ls.AddRange({component.Children[0].Identifier}());");
                         queue.Enqueue(component.Children[0]);    
 
                         foreach (var child in component.Children.Skip(1))
                         {
-                            sb.Append(".Concat(");
-                            sb.Append(child.Identifier);
-                            sb.Append(")");
-                            
+                            sb.AppendLine($@"   ls.AddRange({child.Identifier}());");
                             queue.Enqueue(child);
                         }
-
-                        sb.Append(")");
-                        sb.Append(".ToList();");
-                    }
-                    else
-                    {
-                        sb.Append(@"new List<string>() { """ + component.Identifier + @""" };");
                     }
 
-                    sb.AppendLine();
+                    sb.AppendLine("    return ls; }");
                     cache.Add(component);
                 }
             }

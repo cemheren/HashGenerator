@@ -12,7 +12,8 @@ namespace TestProgram
             var topLevelClassOne = new TopLevelClassOne();
             var topLevelClassTwo = new TopLevelClassTwo();
 
-            System.Console.WriteLine(new ComponentAnalysisGenerated.AnalyzedComponents123().DependencyLevelOne);
+            System.Console.WriteLine(new ComponentAnalysisGenerated.ComponentHashcodes().Program);
+            System.Console.WriteLine(string.Join(",", new ComponentAnalysisGenerated.ComponentDependencies().Program()));
         }
     }
 }

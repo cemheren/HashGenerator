@@ -25,12 +25,56 @@ namespace GeneratorUnitTest
         public static void Main(string[] args)
         {
             var topLevelClassOne = new TopLevelClassOne();
-            var topLevelClassTwo = new TopLevelClassTwo();
+            //var topLevelClassTwo = new TopLevelClassTwo();
         }
     }
 "
 ;
-        
+
+        [TestMethod]
+        public void RecursionGenerationTest()
+        {
+            string userSource = @$"
+namespace Program.Test
+{{
+    using System;
+    using GeneratorDependencies;
+    using DependencyLibrary;
+
+    {Filler}
+
+    public class DependencyLevelOne
+    {{ 
+        private DependencyLevelOne dependencyLevelOne;    
+    }}
+
+    [ComponentAnalysis]
+    public class TopLevelClassOne
+    {{
+        private DependencyLevelOne dependencyLevelOne;
+
+        private TopLevelClassOne topLevelClass;
+    }}
+}}
+";
+            Compilation comp = CreateCompilation(userSource);
+            var errors = comp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+
+            var newComp = RunGenerators(comp, out var generatorDiags, new ComponentAnalysisGenerator());
+            var newFile = newComp.SyntaxTrees.Single(x => Path.GetFileName(x.FilePath).EndsWith("ComponentAnalysisGenerated.cs"));
+
+            Assert.IsNotNull(newFile);
+            var generatedfile = newFile.GetText().ToString();
+
+            Assert.IsTrue(generatedfile.Contains("DependencyLevelOne"), message: "DependencyLevelOne");
+
+            Assert.AreEqual(0, generatorDiags.Length);
+            errors = newComp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+
+            Assert.AreEqual(0, errors.Count, message: string.Join("\n ", errors));
+        }
+
+
         [TestMethod]
         public void SimpleGeneratorTest()
         {
