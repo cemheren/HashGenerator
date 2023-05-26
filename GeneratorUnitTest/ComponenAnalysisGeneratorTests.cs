@@ -89,6 +89,7 @@ namespace Program.Test
 
     public class DependencyLevelTwo    
     {{
+        private ITopLevelInterface topLevelInterface;
     }}
     
     public class DependencyLevelOne
@@ -98,6 +99,12 @@ namespace Program.Test
         private Interleaver interleaver;
 
         private DependencyClass dependencyClass;
+
+        private readonly IDependencyInterface dependencyInterface;
+    }}
+
+    public interface ITopLevelInterface
+    {{
     }}
 
     [ComponentAnalysis]
@@ -124,6 +131,7 @@ namespace Program.Test
 
             Assert.IsTrue(generatedfile.Contains("DependencyLevelOne"), message: "DependencyLevelOne");
             Assert.IsTrue(generatedfile.Contains("DependencyLevelTwo"), message: "DependencyLevelTwo");
+            Assert.IsTrue(generatedfile.Contains("IDependencyInterface"), message: "IDependencyInterface");
 
             Assert.AreEqual(0, generatorDiags.Length);
             errors = newComp.GetDiagnostics().Where(d => d.Severity == DiagnosticSeverity.Error).ToList();

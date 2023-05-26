@@ -13,7 +13,7 @@ namespace TestProgram
             var topLevelClassTwo = new TopLevelClassTwo();
 
             System.Console.WriteLine(new ComponentAnalysisGenerated.ComponentHashcodes().Program);
-            System.Console.WriteLine(string.Join(",", new ComponentAnalysisGenerated.ComponentDependencies().Program()));
+            System.Console.WriteLine(string.Join(",", new ComponentAnalysisGenerated.ComponentDependencies().d2()));
         }
     }
 }

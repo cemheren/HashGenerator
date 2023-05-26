@@ -18,11 +18,11 @@
     {
         private int count;
 
-        private string version = "0.0.5";
+        private string version = "0.0.7";
 
         public Dictionary<string, ITypeSymbol> CompiledDependencies { get; private set; }
   
-        public Dictionary<string, ClassDeclarationSyntax> AllClasses { get; private set; }
+        public Dictionary<string, SyntaxNode> AllClasses { get; private set; }
         
         public List<ClassDeclarationSyntax> ComponentClasses { get; private set; }
         internal Dictionary<string, Component> ComponentCache { get; private set; }
@@ -49,7 +49,7 @@
             // Get all my compiled dependencies, they might also have analyzed components in them.
             var types = context.Compilation.GetAllCompilationTypes();
 
-            var properties = types.Where(t => t.TypeKind == TypeKind.Class && t.DeclaredAccessibility <= Accessibility.Public).Select(t => new
+            var properties = types.Where(t => (t.TypeKind == TypeKind.Class || t.TypeKind == TypeKind.Interface) && t.DeclaredAccessibility <= Accessibility.Public).Select(t => new
             {
                 TypeSymbol = t,
                 Properties = t.GetMembers()
@@ -70,22 +70,25 @@
 
             this.count = 0;
 
-            foreach (var classDeclarationSyntax in this.AllClasses.Values)
+            foreach (var syntaxNode in this.AllClasses.Values)
             {
-                var topLevelComponent = new Component
+                if (syntaxNode is ClassDeclarationSyntax classdeclerationSyntax)
                 {
-                    Identifier = classDeclarationSyntax.Identifier.ToString(),
-                    HashCode = 1
-                };
+                    var topLevelComponent = new Component
+                    {
+                        Identifier = classdeclerationSyntax.Identifier.ToString(),
+                        HashCode = 1
+                    };
 
-                componentList.Add(topLevelComponent);
+                    componentList.Add(topLevelComponent);
 
-                topLevelComponent.Children = this.GetDescendantNodesRecursive(compilation, classDeclarationSyntax, 1);
-                topLevelComponent.HashCode = topLevelComponent.Children.Select(c => c.HashCode).XOr() * classDeclarationSyntax.ToString().GetHashCode();
+                    topLevelComponent.Children = this.GetDescendantNodesRecursive(compilation, syntaxNode, 1);
+                    topLevelComponent.HashCode = topLevelComponent.Children.Select(c => c.HashCode).XOr() * syntaxNode.ToString().GetHashCode();
+                }
             }
 
             var componentHashcodes = PrintHashCodes(componentList);
-            var componentDependencies = PrintDependencies(componentList, new HashSet<Component>(), new StringBuilder());
+            var componentDependencies = PrintD2Dependencies(componentList, new HashSet<Component>(), new StringBuilder());
 
             SourceText sourceText = SourceText.From($@"
 namespace ComponentAnalysisGenerated {{
@@ -124,7 +127,7 @@ namespace ComponentAnalysisGenerated {{
 
             foreach (var node in AllDescendantNodesRecursive(syntaxNode, processed))
             {
-                if (descendants.Count > 200 || level > 15)
+                if (descendants.Count > 2000 || level > 15)
                 {
                     break;
                 }
@@ -202,6 +205,45 @@ namespace ComponentAnalysisGenerated {{
             return topLevelComponents.Distinct().Select(c => $@"public int {c.Identifier} => {c.HashCode};").StringJoin("\n");
         }
 
+        private string PrintD2Dependencies(List<Component> topLevelComponents, HashSet<Component> cache, StringBuilder sb)
+        {
+            var queue = new Queue<Component>(topLevelComponents);
+
+            if (queue.Count > 0)
+            {
+                sb.AppendLine($@"public string d2() {{ ");
+            }
+            
+            var builder = new StringBuilder();
+
+            while (queue.Count > 0)
+            {
+                var component = queue.Dequeue();
+                if (cache.Contains(component) == false)
+                {
+                    
+                    builder.Append($"{component.Identifier}\\n");
+
+                    if (component.Children.Count > 0)
+                    {
+                        builder.Append($"{component.Identifier} -> {component.Children[0].Identifier}\\n");
+                        queue.Enqueue(component.Children[0]);
+
+                        foreach (var child in component.Children.Skip(1))
+                        {
+                            builder.Append($"{component.Identifier} -> {child.Identifier}\\n");
+                            queue.Enqueue(child);
+                        }
+                    }
+
+                    cache.Add(component);
+                }
+            }
+            sb.AppendLine($@"    return ""{builder.ToString()}""; }}");
+
+            return sb.ToString();
+        }
+
         private string PrintDependencies(List<Component> topLevelComponents, HashSet<Component> cache, StringBuilder sb)
         {
             var queue = new Queue<Component>(topLevelComponents);
@@ -212,24 +254,24 @@ namespace ComponentAnalysisGenerated {{
                 {
                     sb.AppendLine($@"public List<string> {component.Identifier}() {{ ");
 
-                    sb.AppendLine(@"    var ls = new List<string>() { """ + component.Identifier + @"""};");
+                        sb.AppendLine(@"    var ls = new List<string>() { """ + component.Identifier + @"""};");
                     
-                    sb.AppendLine($@"   if(this.visited.Contains(""" + component.Identifier + @""")) return ls;");
+                        sb.AppendLine($@"   if(this.visited.Contains(""" + component.Identifier + @""")) return ls;");
 
-                    sb.AppendLine($@"   this.visited.Add(""" + component.Identifier + @""");");
+                        sb.AppendLine($@"   this.visited.Add(""" + component.Identifier + @""");");
 
-                    if (component.Children.Count > 0)
-                    {
-
-                        sb.AppendLine($@"   ls.AddRange({component.Children[0].Identifier}());");
-                        queue.Enqueue(component.Children[0]);    
-
-                        foreach (var child in component.Children.Skip(1))
+                        if (component.Children.Count > 0)
                         {
-                            sb.AppendLine($@"   ls.AddRange({child.Identifier}());");
-                            queue.Enqueue(child);
+
+                            sb.AppendLine($@"   ls.AddRange({component.Children[0].Identifier}());");
+                            queue.Enqueue(component.Children[0]);    
+
+                            foreach (var child in component.Children.Skip(1))
+                            {
+                                sb.AppendLine($@"   ls.AddRange({child.Identifier}());");
+                                queue.Enqueue(child);
+                            }
                         }
-                    }
 
                     sb.AppendLine("    return ls; }");
                     cache.Add(component);
@@ -243,7 +285,7 @@ namespace ComponentAnalysisGenerated {{
         {
             public List<ClassDeclarationSyntax> ClassesToAugment = new List<ClassDeclarationSyntax>();
             
-            public Dictionary<string, ClassDeclarationSyntax> AllClasses = new Dictionary<string, ClassDeclarationSyntax>();
+            public Dictionary<string, SyntaxNode> AllClasses = new Dictionary<string, SyntaxNode>();
 
             public void OnVisitSyntaxNode(SyntaxNode syntaxNode)
             {
@@ -256,6 +298,11 @@ namespace ComponentAnalysisGenerated {{
                     }
 
                     AllClasses[cds.Identifier.ToString()] = cds;
+                }
+
+                if (syntaxNode is InterfaceDeclarationSyntax ids)
+                {
+                    AllClasses[ids.Identifier.ToString()] = ids;
                 }
             }
         }

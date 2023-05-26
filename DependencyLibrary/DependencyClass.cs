@@ -8,7 +8,12 @@ namespace DependencyLibrary
         public static int a = 4;
     }
 
-    public class DependencyClass
+    public interface IDependencyInterface
+    { 
+    
+    }
+
+    public class DependencyClass : IDependencyInterface
     {
         public int k = StaticStuff.a;
 
