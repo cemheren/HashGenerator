@@ -6,6 +6,7 @@
     using System.Reflection;
     using System.Runtime.InteropServices;
     using System.Text;
+    using GeneratorDependencies;
     using Generators.Extensions;
     using Microsoft.CodeAnalysis;
     using Microsoft.CodeAnalysis.CSharp;
@@ -18,7 +19,7 @@
     {
         private int count;
 
-        private string version = "0.0.7";
+        private string version = "0.0.9";
 
         public Dictionary<string, ITypeSymbol> CompiledDependencies { get; private set; }
   
@@ -49,7 +50,7 @@
             // Get all my compiled dependencies, they might also have analyzed components in them.
             var types = context.Compilation.GetAllCompilationTypes();
 
-            var properties = types.Where(t => (t.TypeKind == TypeKind.Class || t.TypeKind == TypeKind.Interface) && t.DeclaredAccessibility <= Accessibility.Public).Select(t => new
+            var properties = types.Where(t => (t.TypeKind == TypeKind.Class || t.TypeKind == TypeKind.Interface) && t.DeclaredAccessibility <= Accessibility.Public && t.GetAttributes().Any(att => att.GetType() == typeof(ComponentAttribute))).Select(t => new
             {
                 TypeSymbol = t,
                 Properties = t.GetMembers()
@@ -74,10 +75,14 @@
             {
                 if (syntaxNode is ClassDeclarationSyntax classdeclerationSyntax)
                 {
+                    var attribute = classdeclerationSyntax.AttributeLists.Single(a => a is AttributeListSyntax als && als.ToString().StartsWith("[Component"));
+
+                    var descendents = AllDescendantNodesRecursive(attribute, new HashSet<SyntaxNode>());
+
                     var topLevelComponent = new Component
                     {
                         Identifier = classdeclerationSyntax.Identifier.ToString(),
-                        HashCode = 1
+                        HashCode = 1,
                     };
 
                     componentList.Add(topLevelComponent);
@@ -85,6 +90,11 @@
                     topLevelComponent.Children = this.GetDescendantNodesRecursive(compilation, syntaxNode, 1);
                     topLevelComponent.HashCode = topLevelComponent.Children.Select(c => c.HashCode).XOr() * syntaxNode.ToString().GetHashCode();
                 }
+            }
+
+            if (componentList.Count == 0)
+            {
+                return;
             }
 
             var componentHashcodes = PrintHashCodes(componentList);
@@ -221,7 +231,6 @@ namespace ComponentAnalysisGenerated {{
                 var component = queue.Dequeue();
                 if (cache.Contains(component) == false)
                 {
-                    
                     builder.Append($"{component.Identifier}\\n");
 
                     if (component.Children.Count > 0)
@@ -292,17 +301,18 @@ namespace ComponentAnalysisGenerated {{
                 // Business logic to decide what we're interested in goes here
                 if (syntaxNode is ClassDeclarationSyntax cds)
                 {
-                    if (cds.AttributeLists.Any(a => a is AttributeListSyntax als && als.ToString() == "[ComponentAnalysis]"))
+                    if (cds.AttributeLists.Any(a => a is AttributeListSyntax als && als.ToString().StartsWith("[Component")))
                     {
-                        ClassesToAugment.Add(cds);
+                        AllClasses[cds.Identifier.ToString()] = cds;
                     }
-
-                    AllClasses[cds.Identifier.ToString()] = cds;
                 }
 
                 if (syntaxNode is InterfaceDeclarationSyntax ids)
                 {
-                    AllClasses[ids.Identifier.ToString()] = ids;
+                    if (ids.AttributeLists.Any(a => a is AttributeListSyntax als && als.ToString().StartsWith("[Component")))
+                    {
+                        AllClasses[ids.Identifier.ToString()] = ids;
+                    }
                 }
             }
         }

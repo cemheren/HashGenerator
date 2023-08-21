@@ -8,7 +8,7 @@ using GeneratorDependencies;
 
 namespace Program.ComponentAnalysis
 {
-    [ComponentAnalysis]
+    [Component("PAS", External = false)]
     public class TopLevelClassOne
     {
         private DependencyLevelOne dependencyLevelOne;

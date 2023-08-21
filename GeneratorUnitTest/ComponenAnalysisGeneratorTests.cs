@@ -12,6 +12,7 @@ using Generators.ComponentAnalysis;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Azure.Management.Groups.CosmosDb.Collections;
 
 namespace GeneratorUnitTest
 {
@@ -101,19 +102,22 @@ namespace Program.Test
         private DependencyClass dependencyClass;
 
         private readonly IDependencyInterface dependencyInterface;
+
+        private IEntityCacheCollection collection;
     }}
 
+    [Component(""TOPINTERFACE"")]
     public interface ITopLevelInterface
     {{
     }}
 
-    [ComponentAnalysis]
+    [Component(""CLASSDEP"")]
     public class TopLevelClassOne
     {{
         private DependencyLevelOne dependencyLevelOne;
     }}
 
-    [ComponentAnalysis]
+    [Component(""PAS"", External = false)]
     public class TopLevelClassTwo
     {{
         private DependencyLevelOne dependencyLevelOne;
@@ -149,6 +153,7 @@ namespace Program.Test
                     MetadataReference.CreateFromFile(typeof(Binder).GetTypeInfo().Assembly.Location),
                     MetadataReference.CreateFromFile(typeof(DependencyClass).Assembly.Location),
                     MetadataReference.CreateFromFile(typeof(IGeneratorCapable).Assembly.Location),
+                    MetadataReference.CreateFromFile(typeof(IEntityCacheCollection).Assembly.Location),
                     MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
                     MetadataReference.CreateFromFile(coreDir.FullName + Path.DirectorySeparatorChar + "netstandard.dll")
                 };

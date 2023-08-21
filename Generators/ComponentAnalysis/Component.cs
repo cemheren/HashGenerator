@@ -3,10 +3,14 @@ using System.Collections.Generic;
 using System.Text;
 
 namespace Generators.ComponentAnalysis
-{
+
     internal class Component
     {
         public string Identifier { get; set; }
+
+        public string CodeName { get; set; }
+
+        public bool External { get; set; }
 
         public int HashCode { get; set; }
 

@@ -20,4 +20,9 @@
     <ProjectReference Include="..\Generators\Generators.csproj" />
   </ItemGroup>
 
+
+<ItemGroup>
+	<ProjectReference Include="C:\One\groupsrp\src\GroupsRP\Groups.CosmosDb\Groups.CosmosDb.csproj" />
+</ItemGroup>
+
 </Project>

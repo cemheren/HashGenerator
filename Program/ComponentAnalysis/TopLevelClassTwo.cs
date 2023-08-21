@@ -7,7 +7,7 @@ using GeneratorDependencies;
 
 namespace Program.ComponentAnalysis
 {
-    [ComponentAnalysis]
+    [Component]
     public class TopLevelClassTwo
     {
         private DependencyLevelOne dependencyLevelOne;

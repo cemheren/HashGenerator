@@ -4,36 +4,28 @@ using System.Text;
 
 namespace GeneratorDependencies
 {
-    [System.AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
-    public sealed class ComponentAnalysisAttribute : Attribute
+    [System.AttributeUsage(AttributeTargets.Class | AttributeTargets.Interface, Inherited = false, AllowMultiple = false)]
+    public sealed class ComponentAttribute : Attribute
     {
-        readonly string positionalString;
+        readonly string componentName;
 
         // This is a positional argument
-        public ComponentAnalysisAttribute(string positionalString)
+        public ComponentAttribute(string componentName)
         {
-            this.positionalString = positionalString;
-
-            // TODO: Implement code here
-
-            //throw new NotImplementedException();
+            this.componentName = componentName;
         }
 
-        public ComponentAnalysisAttribute()
+        public ComponentAttribute()
         {
-            this.positionalString = string.Empty;
-
-            // TODO: Implement code here
-
-            //throw new NotImplementedException();
+            this.componentName = null;
         }
 
-        public string PositionalString
+        public string ComponentName
         {
-            get { return positionalString; }
+            get { return componentName; }
         }
 
         // This is a named argument
-        public int NamedInt { get; set; }
+        public bool External { get; set; }
     }
 }
